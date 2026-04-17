@@ -1,0 +1,17 @@
+<xacro:robotiq_gripper 
+    name="robotiq_gripper" 
+    parent="tool0" 
+    include_ros2_control="true" 
+    prefix="gripper_"
+    use_fake_hardware="$(arg use_mock_hardware)"
+    mock_sensor_commands="$(arg mock_sensor_commands)"
+    > <!-- prefix is something I set if I need to distinguish between multiple of these robotiq_gripper objects. Like if I had two or something. But I just have one so I'm passing "" for prefix -->
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </xacro:robotiq_gripper>
+
+
+  <!-- so my understanding is that I set include_ros2_controls to true and it will trigger something internal to add the controls portions. -->
+
+
+
+  Having use fake hardware and mock sensor commands is correct based on install/robotiq_description/share/robotiq_description/urdf/robotiq_2f_140_macro.urdf.xacro

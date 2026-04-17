@@ -1,0 +1,10 @@
+controller_manager:
+  ros__parameters:
+    gripper_controller:
+      type: position_controllers/GripperActionController
+
+gripper_controller:
+  ros__parameters:
+    joint: ur5e_gripper_finger_joint
+    # Adding the type here acts as a backup for the spawner
+    type: position_controllers/GripperActionController
