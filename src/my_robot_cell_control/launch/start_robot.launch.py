@@ -47,6 +47,12 @@ def generate_launch_description():
     declared_arguments.append(
         DeclareLaunchArgument("launch_rviz", default_value="true", description="Launch RViz?")
     )
+    declared_arguments.append(
+        DeclareLaunchArgument("use_tool_communication", default_value="false", description="use tool communication?")
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument("tool_device_name", default_value="/tmp/ttyUR", description="Local device name for the tool communication bridge.")
+    )
 
     return LaunchDescription(
         declared_arguments
@@ -94,6 +100,8 @@ def generate_launch_description():
                             "rsp.launch.py",
                         ]
                     ),
+                    "use_tool_communication": LaunchConfiguration("use_tool_communication"),
+                    "tool_device_name": LaunchConfiguration("tool_device_name"),
                 }.items(),
             ),
             # Node(

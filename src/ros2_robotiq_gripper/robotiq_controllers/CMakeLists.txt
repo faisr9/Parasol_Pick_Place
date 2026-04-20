@@ -1,11 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 project(robotiq_controllers)
 
-# Suppress CMake warning about runtime search path cycles
-if(POLICY CMP0060)
-  cmake_policy(SET CMP0060 NEW)
-endif()
-
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
@@ -30,8 +25,9 @@ target_include_directories(${PROJECT_NAME} PRIVATE
   include
 )
 
-ament_target_dependencies(${PROJECT_NAME}
-  ${THIS_PACKAGE_INCLUDE_DEPENDS}
+target_link_libraries(${PROJECT_NAME}
+  controller_interface::controller_interface
+  ${std_srvs_TARGETS}
 )
 
 pluginlib_export_plugin_description_file(controller_interface controller_plugins.xml)

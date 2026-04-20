@@ -31,6 +31,8 @@
     kinematics_parameters_file="$(arg kinematics_parameters_file)"
     physical_parameters_file="$(arg physical_parameters_file)"
     visual_parameters_file="$(arg visual_parameters_file)"
+    use_mock_hardware="$(arg use_mock_hardware)"
+    mock_sensor_commands="$(arg mock_sensor_commands)"
   >
     <origin xyz="0 0 1" rpy="0 0 0" />
   </xacro:my_robot_cell>

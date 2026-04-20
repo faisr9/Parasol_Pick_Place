@@ -3,11 +3,6 @@
 cmake_minimum_required(VERSION 3.8)
 project(robotiq_hardware_tests LANGUAGES CXX)
 
-# Suppress CMake warning about runtime search path cycles
-if(POLICY CMP0060)
-  cmake_policy(SET CMP0060 NEW)
-endif()
-
 # This module provides installation directories as per the GNU coding standards.
 include(GNUInstallDirs)
 
@@ -36,6 +31,6 @@ add_executable(full_test
     src/command_line_utility.hpp
     src/command_line_utility.cpp
 )
-ament_target_dependencies(full_test robotiq_driver)
+target_link_libraries(full_test robotiq_driver::robotiq_driver)
 
 ament_package()

@@ -37,7 +37,6 @@
 
 #include <hardware_interface/actuator_interface.hpp>
 #include <hardware_interface/types/hardware_interface_type_values.hpp>
-#include <hardware_interface/types/hardware_component_interface_params.hpp>
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -73,31 +72,23 @@ RobotiqGripperHardwareInterface::RobotiqGripperHardwareInterface(std::unique_ptr
 {
 }
 
-hardware_interface::CallbackReturn RobotiqGripperHardwareInterface::on_init(const hardware_interface::HardwareInfo& info)
-{
-  // Call the new on_init with params struct for backward compatibility
-  hardware_interface::HardwareComponentInterfaceParams params;
-  params.hardware_info = info;
-  return on_init(params);
-}
-
-hardware_interface::CallbackReturn RobotiqGripperHardwareInterface::on_init(
-  const hardware_interface::HardwareComponentInterfaceParams& params)
+hardware_interface::CallbackReturn
+RobotiqGripperHardwareInterface::on_init(const hardware_interface::HardwareComponentInterfaceParams& params)
 {
   RCLCPP_DEBUG(kLogger, "on_init");
 
-  if (hardware_interface::SystemInterface::on_init(params) != CallbackReturn::SUCCESS) // I changed params.hardware_info to just params per a deprecation warning
+  if (hardware_interface::SystemInterface::on_init(params) != CallbackReturn::SUCCESS)
   {
     return CallbackReturn::ERROR;
   }
 
   // Read parameters.
-  gripper_closed_pos_ = stod(info_.hardware_parameters["gripper_closed_position"]);
+  gripper_closed_pos_ = stod(info_.hardware_parameters.at("gripper_closed_position"));
   gripper_max_speed_ = info_.hardware_parameters.count("gripper_max_speed") ?
-                           stod(info_.hardware_parameters["gripper_max_speed"]) :
+                           stod(info_.hardware_parameters.at("gripper_max_speed")) :
                            kGripperMaxSpeed;
   gripper_max_force_ = info_.hardware_parameters.count("gripper_max_force") ?
-                           stod(info_.hardware_parameters["gripper_max_force"]) :
+                           stod(info_.hardware_parameters.at("gripper_max_force")) :
                            kGripperMaxforce;
   gripper_position_ = std::numeric_limits<double>::quiet_NaN();
   gripper_velocity_ = std::numeric_limits<double>::quiet_NaN();
@@ -105,7 +96,7 @@ hardware_interface::CallbackReturn RobotiqGripperHardwareInterface::on_init(
   reactivate_gripper_cmd_ = NO_NEW_CMD_;
   reactivate_gripper_async_cmd_.store(false);
 
-  const hardware_interface::ComponentInfo& joint = info_.joints[0];
+  const hardware_interface::ComponentInfo& joint = info_.joints.at(0);
 
   // There is one command interface: position.
   if (joint.command_interfaces.size() != 1)
@@ -115,10 +106,10 @@ hardware_interface::CallbackReturn RobotiqGripperHardwareInterface::on_init(
     return CallbackReturn::ERROR;
   }
 
-  if (joint.command_interfaces[0].name != hardware_interface::HW_IF_POSITION)
+  if (joint.command_interfaces.at(0).name != hardware_interface::HW_IF_POSITION)
   {
-    RCLCPP_FATAL(kLogger, "Joint '%s' does not have expected '%s' interface.", joint.name.c_str(),
-                 hardware_interface::HW_IF_POSITION);
+    RCLCPP_FATAL(kLogger, "Joint '%s' has %s command interfaces found. '%s' expected.", joint.name.c_str(),
+                 joint.command_interfaces.at(0).name.c_str(), hardware_interface::HW_IF_POSITION);
     return CallbackReturn::ERROR;
   }
 
@@ -136,7 +127,7 @@ hardware_interface::CallbackReturn RobotiqGripperHardwareInterface::on_init(
           joint.state_interfaces[i].name == hardware_interface::HW_IF_VELOCITY))
     {
       RCLCPP_FATAL(kLogger, "Joint '%s' has %s state interface. Expected %s or %s.", joint.name.c_str(),
-                   joint.state_interfaces[i].name.c_str(), hardware_interface::HW_IF_POSITION,
+                   joint.state_interfaces.at(i).name.c_str(), hardware_interface::HW_IF_POSITION,
                    hardware_interface::HW_IF_VELOCITY);
       return CallbackReturn::ERROR;
     }
@@ -166,50 +157,11 @@ RobotiqGripperHardwareInterface::on_configure(const rclcpp_lifecycle::State& pre
       return CallbackReturn::ERROR;
     }
 
-    // Open the serial port and handshake with retry logic
-    // This allows time for tool communication (socat) to create virtual serial port
-    const int max_retries = 10;
-    const auto retry_delay = std::chrono::milliseconds(500);
-    bool connected = false;
-
-    for (int attempt = 1; attempt <= max_retries && !connected; ++attempt)
-    {
-      try
-      {
-        RCLCPP_INFO(kLogger, "Attempting to connect to Robotiq gripper (attempt %d/%d)...", attempt, max_retries);
-        connected = driver_->connect();
-
-        if (!connected)
-        {
-          if (attempt < max_retries)
-          {
-            RCLCPP_WARN(kLogger, "Connection failed, retrying in %ld ms...", retry_delay.count());
-            std::this_thread::sleep_for(retry_delay);
-          }
-        }
-        else
-        {
-          RCLCPP_INFO(kLogger, "Successfully connected to Robotiq gripper");
-        }
-      }
-      catch (const std::exception& e)
-      {
-        if (attempt < max_retries)
-        {
-          RCLCPP_WARN(kLogger, "Connection attempt %d failed: %s. Retrying in %ld ms...",
-                      attempt, e.what(), retry_delay.count());
-          std::this_thread::sleep_for(retry_delay);
-        }
-        else
-        {
-          throw;  // Re-throw on last attempt
-        }
-      }
-    }
-
+    // Open the serial port and handshake.
+    bool connected = driver_->connect();
     if (!connected)
     {
-      RCLCPP_ERROR(kLogger, "Cannot connect to the Robotiq gripper after %d attempts", max_retries);
+      RCLCPP_ERROR(kLogger, "Cannot connect to the Robotiq gripper");
       return CallbackReturn::ERROR;
     }
   }
