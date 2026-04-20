@@ -72,12 +72,12 @@ int main(int argc, char** argv)
 
   std::string target_str = argv[1];
   double target_position;
-  const double MAX_TARGET_POS = 0.59;
+  const double MAX_TARGET_POS = 0.65;
   const double MIN_TARGET_POS = 0.01;
   if (target_str == "open") {
     target_position = 0.05;
   } else if (target_str == "close") {
-    target_position = 0.55;
+    target_position = 0.60;
   } else {
     target_position = std::stod(target_str);
     if (target_position > MAX_TARGET_POS || target_position < MIN_TARGET_POS) {

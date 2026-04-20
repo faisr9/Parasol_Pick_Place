@@ -186,8 +186,8 @@ int main(int argc, char** argv)
     geometry_msgs::msg::Pose box_pose;
     box_pose.orientation.w = 1.0;  // We can leave out the x, y, and z components of the quaternion since they are initialized to 0
     // I have to flip the y values because that's what the simulation needs to reflect reality
-    box_pose.position.x = 0.53; // 0.2
-    box_pose.position.y = -0.36; // 0.2
+    box_pose.position.x = -0.53; // 0.2
+    box_pose.position.y = 0.36; // 0.2
     box_pose.position.z = -0.1; // 0.25
 
     the_floor.primitives.push_back(primitive);
@@ -216,8 +216,8 @@ int main(int argc, char** argv)
     geometry_msgs::msg::Pose box_pose;
     box_pose.orientation.w = 1.0;  // We can leave out the x, y, and z components of the quaternion since they are initialized to 0
     // I have to flip the y values because that's what the simulation needs to reflect reality
-    box_pose.position.x = 1.0;
-    box_pose.position.y = -1.3;
+    box_pose.position.x = -1.0;
+    box_pose.position.y = 1.3;
     box_pose.position.z = 0.5;
 
     the_post.primitives.push_back(primitive);
