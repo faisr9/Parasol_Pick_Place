@@ -1,0 +1,65 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <xacro:include filename="$(find ur_description)/urdf/ur_macro.xacro"/>
+
+  <!-- Gripper -->
+  <xacro:include filename="$(find robotiq_description)/urdf/robotiq_2f_140_macro.urdf.xacro" />
+
+  <xacro:macro name="my_robot_cell" params="
+    parent
+    *origin
+    ur_type
+    joint_limits_parameters_file
+    kinematics_parameters_file
+    physical_parameters_file
+    visual_parameters_file
+    use_mock_hardware
+    mock_sensor_commands
+    ">
+
+    <!--This will create the specific robot-->
+    <xacro:ur_robot
+      name="${ur_type}"
+      tf_prefix="${ur_type}_"
+      parent="${parent}"
+      joint_limits_parameters_file="${joint_limits_parameters_file}"
+      kinematics_parameters_file="${kinematics_parameters_file}"
+      physical_parameters_file="${physical_parameters_file}"
+      visual_parameters_file="${visual_parameters_file}"
+    >
+      <origin xyz="0 0 0" rpy="0 0 0" />
+    </xacro:ur_robot>
+
+    <!-- Gripper -->
+    <xacro:robotiq_gripper 
+      name="${ur_type}_robotiq_gripper" 
+      parent="${ur_type}_tool0" 
+      include_ros2_control="true" 
+      prefix="${ur_type}_gripper_"
+      use_fake_hardware="$(arg use_mock_hardware)"
+      mock_sensor_commands="$(arg mock_sensor_commands)"
+      > <!-- prefix is something I set if I need to distinguish between multiple of these robotiq_gripper objects. Like if I had two or something. But I just have one so I'm passing "" for prefix -->
+      <!-- com_port="/dev/ttyUSB0"  -->
+      <!-- ^^ this is how you could pass in a com port value (you could also pipe it in through the controlled.urdf.xacro) -->
+      <origin xyz="0 0 0" rpy="0 0 0" />
+    </xacro:robotiq_gripper>
+
+    <link name="${ur_type}_gripper_tcp" />
+
+    <!--  ${ur_type}_gripper_ in the link name below is from the ${ur_type}_gripper_ in the prefix for the robotiq_gripper above -->
+    <joint name="${ur_type}_gripper_tcp_joint" type="fixed">
+      <parent link="${ur_type}_gripper_robotiq_140_base_link" /> <child link="${ur_type}_gripper_tcp" />
+      <origin xyz="0 0 0.210" rpy="0 0 0" /> 
+    </joint>
+
+    <link name="${ur_type}_gripper_pre_grasp" />
+
+    <joint name="${ur_type}_gripper_pre_grasp_joint" type="fixed">
+      <parent link="${ur_type}_gripper_tcp" /> <child link="${ur_type}_gripper_pre_grasp" />
+      <origin xyz="0 0 0.100" rpy="0 0 0" /> 
+    </joint>
+    <!-- 10 centimeters away from the grasp position.  -->
+  </xacro:macro>
+
+</robot>

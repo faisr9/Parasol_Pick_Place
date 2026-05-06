@@ -1,0 +1,10 @@
+moveit_setup_assistant_config:
+  urdf:
+    package: my_robot_cell_control
+    relative_path: urdf/my_robot_cell_controlled.urdf.xacro
+  srdf:
+    relative_path: config/my_robot_cell.srdf
+  package_settings:
+    author_name: Reid Faistl
+    author_email: rfaistl2@illinois.edu
+    generated_timestamp: 1778083226
