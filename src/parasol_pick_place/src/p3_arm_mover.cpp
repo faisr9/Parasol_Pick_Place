@@ -65,13 +65,13 @@ int main(int argc, char** argv)
     RCLCPP_INFO(node->get_logger(), (*iter).c_str());
   }
 
-  // // 1. Get the current pose of the end-effector (usually "tool0")
-  // // auto live_pose = move_group_interface.getPoseTarget(); 
-  // // Note: Use move_group_interface.getCurrentPose() for the live state
-  // auto live_pose = move_group_interface.getCurrentPose("ur5e_tool0"); // "ur5e_gripper_tcp"
+  // 1. Get the current pose of the end-effector (usually "tool0")
   auto live_pose = move_group_interface.getCurrentPose(move_group_interface.getEndEffectorLink());
 
 
+  // I'm getting the current position in x y z and the current orientation in yaw pitch roll
+  // MoveIt operates using quaternions because they avoid issues like gimbal lock. So I have to convert
+  // from the quaternion to yaw pitch and roll
   tf2::Quaternion curr_q(live_pose.pose.orientation.x, live_pose.pose.orientation.y, live_pose.pose.orientation.z, live_pose.pose.orientation.w);
   curr_q.normalize();
   tf2::Matrix3x3 curr_euler(curr_q);
@@ -100,10 +100,10 @@ int main(int argc, char** argv)
   // 2. Set a target Pose (values in meters/radians)
   geometry_msgs::msg::Pose target_pose;
 
-  const char* do_nothing_str = "x";
+  const char* do_nothing_str = "x"; // if the user passes in this string, the current position of the robot
+  // for the substituted argument will be used.
 
-  // 1. Define your angles in RADIANS
-
+  // 1. Take the user input in degrees and store it as radians
   double roll = (!strcmp(do_nothing_str, argv[6])) ? curr_roll : std::stod(argv[6]) * M_PI / 180.0;
   double pitch = (!strcmp(do_nothing_str, argv[5])) ? curr_pitch : std::stod(argv[5]) * M_PI / 180.0;
   double yaw = (!strcmp(do_nothing_str, argv[4])) ? curr_yaw : std::stod(argv[4]) * M_PI / 180.0;
@@ -119,28 +119,11 @@ int main(int argc, char** argv)
   target_pose.orientation.z = q.z();
   target_pose.orientation.w = q.w();
 
-  // target_pose.orientation.w = 1.0;
-
-  // singularities from roll pitch yaw bad
-  // quaternion fixes
-  // there is a function for this
-
   target_pose.position.x = (!strcmp(do_nothing_str, argv[1])) ? live_pose.pose.position.x : std::stod(argv[1]);
   target_pose.position.y = (!strcmp(do_nothing_str, argv[2])) ? live_pose.pose.position.y : std::stod(argv[2]);
   target_pose.position.z = (!strcmp(do_nothing_str, argv[3])) ? live_pose.pose.position.z : std::stod(argv[3]);
 
-  // target_pose.position.x = std::stod(argv[1]);
-  // target_pose.position.y = std::stod(argv[2]);
-  // target_pose.position.z = std::stod(argv[3]);
-
-
-
-
-  // move_group_interface.setEndEffectorLink("ur5e_tool0"); // the default should be "ur5e_gripper_pre_grasp"
-
-
-
-
+  
   RCLCPP_INFO(node->get_logger(), "Goal Quaternion: x=%f, y=%f, z=%f, w=%f",
             target_pose.orientation.x,
             target_pose.orientation.y,
@@ -150,6 +133,8 @@ int main(int argc, char** argv)
 
   move_group_interface.setPoseTarget(target_pose);
 
+  // If you wanted to send a joint-space command, this is how you could do it:
+  // I think (emphasis on think) this position is very similar to the upright home position
   // std::vector<double> joint_group_positions = {
   //   0.0,    // ur5e_shoulder_pan_joint
   //   -1.57,  // ur5e_shoulder_lift_joint (bent forward)
@@ -158,7 +143,6 @@ int main(int argc, char** argv)
   //   -1.57,  // ur5e_wrist_2_joint (rotated)
   //   0.0     // ur5e_wrist_3_joint
   // };
-
   // move_group_interface.setJointValueTarget(joint_group_positions);
 
 
@@ -167,7 +151,7 @@ int main(int argc, char** argv)
   MoveGroupInterface::Plan my_plan;
 
   
-    // Create collision object for the robot to avoid
+  // Create a collision object for the robot to avoid
   auto const the_floor = [frame_id =
                                   move_group_interface.getPlanningFrame()] {
     moveit_msgs::msg::CollisionObject the_floor;
@@ -180,15 +164,15 @@ int main(int argc, char** argv)
     primitive.dimensions.resize(3);
     primitive.dimensions[primitive.BOX_X] = 1.5;
     primitive.dimensions[primitive.BOX_Y] = 1.5;
-    primitive.dimensions[primitive.BOX_Z] = 0.19;
+    primitive.dimensions[primitive.BOX_Z] = 0.19; // this is the diameter
 
     // Define the pose of the box (relative to the frame_id)
     geometry_msgs::msg::Pose box_pose;
     box_pose.orientation.w = 1.0;  // We can leave out the x, y, and z components of the quaternion since they are initialized to 0
     // I have to flip the y values because that's what the simulation needs to reflect reality
-    box_pose.position.x = -0.53; // 0.2
-    box_pose.position.y = 0.36; // 0.2
-    box_pose.position.z = -0.1; // 0.25
+    box_pose.position.x = -0.53; // these x and y positions create the floor with the right orientation relative to the UR5e in 3307
+    box_pose.position.y = 0.36; 
+    box_pose.position.z = -0.1; 
 
     the_floor.primitives.push_back(primitive);
     the_floor.primitive_poses.push_back(box_pose);
@@ -197,7 +181,7 @@ int main(int argc, char** argv)
     return the_floor;
   }();
 
-    // Create collision object for the robot to avoid
+  // Create collision object for the robot to avoid
   auto const the_post = [frame_id =
                                   move_group_interface.getPlanningFrame()] {
     moveit_msgs::msg::CollisionObject the_post;
@@ -214,8 +198,7 @@ int main(int argc, char** argv)
 
     // Define the pose of the box (relative to the frame_id)
     geometry_msgs::msg::Pose box_pose;
-    box_pose.orientation.w = 1.0;  // We can leave out the x, y, and z components of the quaternion since they are initialized to 0
-    // I have to flip the y values because that's what the simulation needs to reflect reality
+    box_pose.orientation.w = 1.0;
     box_pose.position.x = -1.0;
     box_pose.position.y = 1.3;
     box_pose.position.z = 0.5;
@@ -229,28 +212,31 @@ int main(int argc, char** argv)
 
 
   moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
+  // Create the planning scene (above) and add the collision objects to it (below)
   planning_scene_interface.applyCollisionObject(the_floor);
   planning_scene_interface.applyCollisionObject(the_post);
+  // even though planning_scene_interface isn't used anywhere else, MoveIt will still account for it, and its obstacles will persist
+  // even after this ROS node ends.
 
   rclcpp::sleep_for(std::chrono::seconds(1));
 
-  move_group_interface.setNumPlanningAttempts(50); // like why not. It's taking usually like 0.05 sec per plan
-  // previously it was using the default of 10 and failing to find a solution
-  move_group_interface.setPlanningTime(10.0);
+  move_group_interface.setNumPlanningAttempts(50); // This could very likely be a much higher value
+  move_group_interface.setPlanningTime(5.0);
 
-  // move_group_interface.setEndEffector()
 
   // SECTION FOR CARTESIAN PATHS:
   // funny story: the cartesia planner just dies if it goes through the origin LOL
+
+  // Cartesian Paths:
+  // We first attempt to create a cartesian path for a smoother motion. If this fails, we will try the full motion planner
 
   // 1. Define your waypoints
   std::vector<geometry_msgs::msg::Pose> waypoints;
   waypoints.push_back(target_pose); // The goal position
 
   // 2. Set parameters for the Cartesian calculation
-  double eef_step = 0.01;      // Resolution: 1cm interpolation steps
-  // this number might be bad and messing me up. The cartesian path planner fails a lot and this could be why?
-  // regardless we have the OMPL planner, so it's fine.
+  // Resolution: 1cm interpolation steps
+  double eef_step = 0.01;      
 
   // 3. Compute the path
   moveit_msgs::msg::RobotTrajectory trajectory;
@@ -262,8 +248,10 @@ int main(int argc, char** argv)
 
   // 4. Execute the plan
   if (fraction >= 1.0) {
+    // we successfully found a cartesian path
     move_group_interface.execute(trajectory);
   } else {
+    // we could not find a cartesian path. Instead, we will now use the actual planner
     RCLCPP_WARN(node->get_logger(), "Cartesian path planning failed. Attempting non-cartesian planning.");
     
     bool success = (move_group_interface.plan(my_plan) == moveit::core::MoveItErrorCode::SUCCESS);
@@ -276,61 +264,6 @@ int main(int argc, char** argv)
     }
   }
 
-  // comment out the below section for not cartesian
-
-
-
   rclcpp::shutdown();
   return 0;
 }
-
-// #include <memory>
-
-// #include <rclcpp/rclcpp.hpp>
-// #include <moveit/move_group_interface/move_group_interface.hpp>
-
-// int main(int argc, char * argv[])
-// {
-//   // Initialize ROS and create the Node
-//   rclcpp::init(argc, argv);
-//   auto const node = std::make_shared<rclcpp::Node>(
-//     "hello_moveit",
-//     rclcpp::NodeOptions().automatically_declare_parameters_from_overrides(true)
-//   );
-
-//   // Create a ROS logger
-//   auto const logger = rclcpp::get_logger("hello_moveit");
-
-//   // Create the MoveIt MoveGroup Interface
-//   using moveit::planning_interface::MoveGroupInterface;
-//   auto move_group_interface = MoveGroupInterface(node, "manipulator");
-
-//   // Set a target Pose
-//   auto const target_pose = []{
-//     geometry_msgs::msg::Pose msg;
-//     msg.orientation.w = 1.0;
-//     msg.position.x = 0.28;
-//     msg.position.y = -0.2;
-//     msg.position.z = 0.5;
-//     return msg;
-//   }();
-//   move_group_interface.setPoseTarget(target_pose);
-
-//   // Create a plan to that target pose
-//   auto const [success, plan] = [&move_group_interface]{
-//     moveit::planning_interface::MoveGroupInterface::Plan msg;
-//     auto const ok = static_cast<bool>(move_group_interface.plan(msg));
-//     return std::make_pair(ok, msg);
-//   }();
-
-//   // Execute the plan
-//   if(success) {
-//     move_group_interface.execute(plan);
-//   } else {
-//     RCLCPP_ERROR(logger, "Planning failed!");
-//   }
-
-//   // Shutdown ROS
-//   rclcpp::shutdown();
-//   return 0;
-// }

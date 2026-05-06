@@ -13,7 +13,6 @@
 //      if this executable is run before the one that moves the arm, then obstacles will not be spawned into the environment
 //      thus if this is run first, gripper movements will not consider the enviornment. Which is bad. 
 
-
 int main(int argc, char** argv)
 {
 
@@ -30,7 +29,7 @@ int main(int argc, char** argv)
   executor.add_node(node);
   std::thread([&executor]() { executor.spin(); }).detach();
 
-  // 1. Setup the MoveGroupInterface for the "ur_arm" planning group
+  // 1. Setup the MoveGroupInterface for the "gripper_ee" planning group
   using moveit::planning_interface::MoveGroupInterface;
   auto move_group_interface = MoveGroupInterface(node, "gripper_ee");
 
@@ -45,14 +44,6 @@ int main(int argc, char** argv)
     RCLCPP_INFO(node->get_logger(), (*iter).c_str());
   }
 
-  // // 1. Get the current pose of the end-effector (usually "tool0")
-  // // auto live_pose = move_group_interface.getPoseTarget(); 
-  // // Note: Use move_group_interface.getCurrentPose() for the live state
-  // auto live_pose = move_group_interface.getCurrentPose("ur5e_gripper_tcp");
-//   auto live_pose = move_group_interface.getCurrentPose("ur5e_base_link");
-
-
-
   if (argc != NUM_ARGS) {
     // const char* wrong_num_args_msg = ("Incorrect number of arguments! Expected " + std::to_string(NUM_ARGS) + " but got " + std::to_string(argc) + "!").c_str();
     RCLCPP_ERROR(node->get_logger(), "bad num args. Should receive one argument, either the desired decimal position, or 'open' or 'close' (not in quotes)");
@@ -61,9 +52,9 @@ int main(int argc, char** argv)
     return 1;
   } 
 
-  for (int i = 0; i < argc; i++) {
-    RCLCPP_INFO(node->get_logger(), argv[i]);
-  }
+  // for (int i = 0; i < argc; i++) {
+  //   RCLCPP_INFO(node->get_logger(), argv[i]);
+  // }
 
 
 
@@ -88,13 +79,11 @@ int main(int argc, char** argv)
   }
 
   // 3. Set the joint value target
-  // "finger_joint" must match the joint name in your URDF
+  // the joint target name here must match the joint name in your URDF
   std::map<std::string, double> joint_targets;
   joint_targets["ur5e_gripper_finger_joint"] = target_position;
   
   move_group_interface.setJointValueTarget(joint_targets);
-
-
 
   move_group_interface.setNumPlanningAttempts(25); // why not. It's taking usually like 0.05 sec per plan
 
@@ -105,20 +94,16 @@ int main(int argc, char** argv)
 
   rclcpp::sleep_for(std::chrono::seconds(1));
 
-
+  // Attempt to make a plan
   bool success = move_group_interface.plan(my_plan) == moveit::core::MoveItErrorCode::SUCCESS;
 
 
-  // 4. Execute the plan
+  // 4. Execute the plan if one was successfully made
   if (success) {
     move_group_interface.execute(my_plan);
   } else {
     RCLCPP_ERROR(node->get_logger(), "Planning failed!");
   }
-
-  // comment out the below section for not cartesian
-
-
 
   rclcpp::shutdown();
   return 0;
