@@ -1,7 +1,7 @@
 moveit_setup_assistant_config:
   urdf:
-    package: my_robot_cell_control
-    relative_path: urdf/my_robot_cell_controlled.urdf.xacro
+    package: p3_cell_control
+    relative_path: urdf/p3_cell_controlled.urdf.xacro
   srdf:
     relative_path: config/my_robot_cell.srdf
   package_settings:

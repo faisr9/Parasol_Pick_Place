@@ -2,7 +2,7 @@
 <robot name="my_robot_cell" xmlns:xacro="http://ros.org/wiki/xacro">
 
   <!--First, include the macro from our custom description-->
-  <xacro:include filename="$(find p3_cell_control)/urdf/p3_cell_macro.xacro"/>
+  <xacro:include filename="$(find p3_cell_description)/urdf/p3_cell_macro.xacro"/>
   <!--The driver already provides a control tag for the UR arm, we can directly include-->
   <xacro:include filename="$(find ur_robot_driver)/urdf/ur.ros2_control.xacro"/>
 
