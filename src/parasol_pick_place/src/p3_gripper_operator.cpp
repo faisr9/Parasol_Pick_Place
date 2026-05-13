@@ -33,16 +33,21 @@ int main(int argc, char** argv)
   using moveit::planning_interface::MoveGroupInterface;
   auto move_group_interface = MoveGroupInterface(node, "gripper_ee");
 
-
-  RCLCPP_INFO(node->get_logger(), "The current end effector link is ");
-  RCLCPP_INFO(node->get_logger(), move_group_interface.getEndEffectorLink().c_str());
+  bool PRINT_DEBUGS = false;
 
 
-  auto link_names = move_group_interface.getLinkNames();
+  if (PRINT_DEBUGS) {
+    RCLCPP_INFO(node->get_logger(), "The current end effector link is ");
+    RCLCPP_INFO(node->get_logger(), move_group_interface.getEndEffectorLink().c_str());
+    
+    auto link_names = move_group_interface.getLinkNames();
 
-  for (auto iter = link_names.begin(); iter != link_names.end(); iter++) {
-    RCLCPP_INFO(node->get_logger(), (*iter).c_str());
+    for (auto iter = link_names.begin(); iter != link_names.end(); iter++) {
+      RCLCPP_INFO(node->get_logger(), (*iter).c_str());
+    }
   }
+
+
 
   if (argc != NUM_ARGS) {
     // const char* wrong_num_args_msg = ("Incorrect number of arguments! Expected " + std::to_string(NUM_ARGS) + " but got " + std::to_string(argc) + "!").c_str();

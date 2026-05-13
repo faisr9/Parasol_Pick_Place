@@ -29,6 +29,9 @@ int main(int argc, char** argv)
   auto move_group_interface = MoveGroupInterface(node, "ur_arm");
 
 
+  bool PRINT_DEBUGS = true;
+
+
   if (argc == NUM_ARGS + 1) {
     std::string desired_ee = argv[NUM_ARGS];
     
@@ -43,7 +46,7 @@ int main(int argc, char** argv)
     }
     
     // std::string info_
-    RCLCPP_INFO(node->get_logger(), ("Set the end effector to " + move_group_interface.getEndEffectorLink()).c_str());
+    if (PRINT_DEBUGS) RCLCPP_INFO(node->get_logger(), ("Set the end effector to " + move_group_interface.getEndEffectorLink()).c_str());
 
   } else if (argc != NUM_ARGS) {
     // const char* wrong_num_args_msg = ("Incorrect number of arguments! Expected " + std::to_string(NUM_ARGS) + " but got " + std::to_string(argc) + "!").c_str();
@@ -53,17 +56,22 @@ int main(int argc, char** argv)
     return 1;
   } 
 
-  for (int i = 0; i < argc; i++) {
-    RCLCPP_INFO(node->get_logger(), argv[i]);
+  if (PRINT_DEBUGS) {
+    for (int i = 0; i < argc; i++) {
+      RCLCPP_INFO(node->get_logger(), argv[i]);
+    }
+
+    // RCLCPP_INFO(node->get_logger(), ("The current end effector link is " + move_group_interface.getEndEffectorLink()).c_str());
+    // RCLCPP_INFO(node->get_logger(), ("The current pose reference frame is " + move_group_interface.getPoseReferenceFrame()).c_str());
+
+
+    // auto link_names = move_group_interface.getLinkNames();
+
+    // for (auto iter = link_names.begin(); iter != link_names.end(); iter++) {
+    //   RCLCPP_INFO(node->get_logger(), (*iter).c_str());
+    // }
   }
 
-  RCLCPP_INFO(node->get_logger(), ("The current end effector link is " + move_group_interface.getEndEffectorLink()).c_str());
-
-  auto link_names = move_group_interface.getLinkNames();
-
-  for (auto iter = link_names.begin(); iter != link_names.end(); iter++) {
-    RCLCPP_INFO(node->get_logger(), (*iter).c_str());
-  }
 
   // 1. Get the current pose of the end-effector (usually "tool0")
   auto live_pose = move_group_interface.getCurrentPose(move_group_interface.getEndEffectorLink());
@@ -78,11 +86,13 @@ int main(int argc, char** argv)
   double curr_roll, curr_pitch, curr_yaw;
   curr_euler.getRPY(curr_roll, curr_pitch, curr_yaw);
 
-  RCLCPP_INFO(node->get_logger(), "Current Quaternion: x=%f, y=%f, z=%f, w=%f",
-          curr_q.getX(),
-          curr_q.getY(),
-          curr_q.getZ(),
-          curr_q.getW());
+  if (PRINT_DEBUGS) {
+    RCLCPP_INFO(node->get_logger(), "Current Quaternion: x=%f, y=%f, z=%f, w=%f",
+            curr_q.getX(),
+            curr_q.getY(),
+            curr_q.getZ(),
+            curr_q.getW());
+  }
 
   // 2. Extract and print Position
   RCLCPP_INFO(node->get_logger(), "Current Position: x=%f, y=%f, z=%f",
@@ -108,30 +118,73 @@ int main(int argc, char** argv)
   double pitch = (!strcmp(do_nothing_str, argv[5])) ? curr_pitch : std::stod(argv[5]) * M_PI / 180.0;
   double yaw = (!strcmp(do_nothing_str, argv[4])) ? curr_yaw : std::stod(argv[4]) * M_PI / 180.0;
 
+
   // 2. Create a tf2 Quaternion and set it using Euler angles
   tf2::Quaternion q;
   q.setRPY(roll, pitch, yaw);
-  q.normalize();
 
+  // // The position now being as a goal constraint
+  // // 1. Create a Goal Constraint
+  // moveit_msgs::msg::Constraints goal_constraints;
+
+  // // 2. Position Constraint (Standard: arrive at a specific point)
+  // moveit_msgs::msg::PositionConstraint p_constr;
+  // p_constr.header.frame_id = move_group_interface.getPoseReferenceFrame();
+  // p_constr.link_name = move_group_interface.getEndEffectorLink();
+  // geometry_msgs::msg::Point target_point;
+  // target_point.x = (!strcmp(do_nothing_str, argv[1])) ? live_pose.pose.position.x : std::stod(argv[1]);
+  // target_point.y = (!strcmp(do_nothing_str, argv[2])) ? live_pose.pose.position.y : std::stod(argv[2]);
+  // target_point.z = (!strcmp(do_nothing_str, argv[3])) ? live_pose.pose.position.z : std::stod(argv[3]);
+
+  // shape_msgs::msg::SolidPrimitive bounding_box;
+  // bounding_box.type = shape_msgs::msg::SolidPrimitive::BOX;
+  // bounding_box.dimensions = {0.001, 0.001, 0.001}; // Very small box = "this point"
+
+  // p_constr.constraint_region.primitives.push_back(bounding_box);
+  // p_constr.constraint_region.primitive_poses.push_back(target_pose); // Target position
+  // p_constr.weight = 1.0;
+  // goal_constraints.position_constraints.push_back(p_constr);
+
+
+  // Orientation constraints
+
+  // 2a. Define your Path Constraints object
+  // moveit_msgs::msg::Constraints path_constraints;
+  // moveit_msgs::msg::OrientationConstraint o_constr;
+  // o_constr.header.frame_id = move_group_interface.getPoseReferenceFrame(); // Ensure this matches move_group.getPoseReferenceFrame()
+  // o_constr.link_name = move_group_interface.getEndEffectorLink(); // The link you want to constrain
+
+  // o_constr.orientation = tf2::toMsg(q);
+
+  // // 2b. Define tolerances (in Radians)
+  // o_constr.absolute_x_axis_tolerance = 0.05; // Tight Roll constraint
+  // o_constr.absolute_y_axis_tolerance = 0.05; // Tight Pitch constraint
+  // o_constr.absolute_z_axis_tolerance = 6.28; // Free Yaw (360 degrees)
+  // o_constr.weight = 1.0;
+
+  // // 2c. Add to the constraints message and apply to move_group
+  // path_constraints.orientation_constraints.emplace_back(o_constr);
+  // move_group_interface.setPathConstraints(path_constraints);
+
+
+  
   // 3. Convert to the message format used by MoveIt
-  target_pose.orientation.x = q.x();
-  target_pose.orientation.y = q.y();
-  target_pose.orientation.z = q.z();
-  target_pose.orientation.w = q.w();
-
+  target_pose.orientation = tf2::toMsg(q);
   target_pose.position.x = (!strcmp(do_nothing_str, argv[1])) ? live_pose.pose.position.x : std::stod(argv[1]);
   target_pose.position.y = (!strcmp(do_nothing_str, argv[2])) ? live_pose.pose.position.y : std::stod(argv[2]);
   target_pose.position.z = (!strcmp(do_nothing_str, argv[3])) ? live_pose.pose.position.z : std::stod(argv[3]);
 
-  
-  RCLCPP_INFO(node->get_logger(), "Goal Quaternion: x=%f, y=%f, z=%f, w=%f",
-            target_pose.orientation.x,
-            target_pose.orientation.y,
-            target_pose.orientation.z,
-            target_pose.orientation.w);          
-
-
   move_group_interface.setPoseTarget(target_pose);
+
+  // move_group_interface.
+
+  if (PRINT_DEBUGS) {
+    RCLCPP_INFO(node->get_logger(), "Goal Quaternion: x=%f, y=%f, z=%f, w=%f",
+              target_pose.orientation.x,
+              target_pose.orientation.y,
+              target_pose.orientation.z,
+              target_pose.orientation.w);          
+  }
 
   // If you wanted to send a joint-space command, this is how you could do it:
   // I think (emphasis on think) this position is very similar to the upright home position
@@ -149,6 +202,7 @@ int main(int argc, char** argv)
 
   // // 3. Create a plan
   MoveGroupInterface::Plan my_plan;
+
 
   
   // Create a collision object for the robot to avoid
@@ -220,8 +274,8 @@ int main(int argc, char** argv)
 
   rclcpp::sleep_for(std::chrono::seconds(1));
 
-  move_group_interface.setNumPlanningAttempts(50); // This could very likely be a much higher value
-  move_group_interface.setPlanningTime(5.0);
+  move_group_interface.setNumPlanningAttempts(25); // This could very likely be a much higher value
+  move_group_interface.setPlanningTime(10.0);
 
 
   // SECTION FOR CARTESIAN PATHS:
@@ -247,9 +301,12 @@ int main(int argc, char** argv)
   );
 
   // 4. Execute the plan
+
+  bool not_moved = true;
   if (fraction >= 1.0) {
     // we successfully found a cartesian path
     move_group_interface.execute(trajectory);
+    not_moved = false;
   } else {
     // we could not find a cartesian path. Instead, we will now use the actual planner
     RCLCPP_WARN(node->get_logger(), "Cartesian path planning failed. Attempting non-cartesian planning.");
@@ -259,11 +316,13 @@ int main(int argc, char** argv)
     // 4. Execute the plan
     if (success) {
       move_group_interface.execute(my_plan);
+      not_moved = false;
     } else {
       RCLCPP_ERROR(node->get_logger(), "Planning failed!");
     }
   }
+  move_group_interface.clearPathConstraints();
 
   rclcpp::shutdown();
-  return 0;
+  return not_moved;
 }
